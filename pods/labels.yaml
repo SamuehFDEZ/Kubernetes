@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: podtest3
+  labels:
+    app: front
+    env: dev
+spec:
+  containers:
+  - name: cont1
+    image: nginx:alpine
+    # The pod template ends here
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: podtest4
+  labels:
+    app: backend
+    env: dev
+spec:
+  containers:
+  - name: cont1
+    image: nginx:alpine
+    # The pod template ends here
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: podtest4
+  labels:
+    app: backend
+    env: dev
+spec:
+  containers:
+  - name: cont1
+    image: nginx:alpine
+    # The pod template ends here
