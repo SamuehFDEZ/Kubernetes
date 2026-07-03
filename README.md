@@ -2,4 +2,4 @@
 Repository for learning Kubernetes
 
 
-![alt text](image.png)
+<img src="image.png" alt="Kubernetes Logo" width="150" height="auto">
