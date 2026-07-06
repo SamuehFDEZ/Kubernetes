@@ -129,3 +129,21 @@ kubectl get pods -l app=backend
 - Sin self-healing (No se autoregeneran)
 - Si quieres crear masivamente pods tienes que hacerlo manualmente en el yaml
 - Los pods no tienen autorefresh, es decir, no se actualizan solos
+
+
+## Replicaset
+
+- Objeto superior a los pods
+- Se "adueña" de ellos y los crea
+- Agrega al metadata de los pods el valor owner, referenciando a qué replicaset pertenecen
+- Otro replicaset no puede tomar un pod que ya tenga owner
+
+### Para obtener replicasets por shortname
+```bash
+kubectl get rs
+```
+rs de replicaset eso se puede consultar en
+
+```bash
+kubectl api-resources
+```
