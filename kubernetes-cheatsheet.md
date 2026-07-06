@@ -147,3 +147,46 @@ rs de replicaset eso se puede consultar en
 ```bash
 kubectl api-resources
 ```
+
+## Para agregar labels a pods sin owner
+```bash
+kubectl label pods podtest1 app=pod-label
+```
+
+Al crear dos pods diferentes con el mismo label, el replicaSet adopta esos pods como suyos y agrega a la metadata ownerReferences la referencia del replicaSet
+
+¡Problema! los pods son totalmente distintos pero para el replicaset son iguales debido al label que comparten
+
+Es por ello que los pods han de ser creados por unidades u objetos mayores, ya sean replicasets o deployments
+
+
+## Problemas de ReplicaSet
+
+El concepto general es que debe mantener un numero n de replicas de un pod segun lo que digamos en el manifiesto (yaml)
+
+En el caso de que se quiera hacer un cambio en plano al pod (directamente a él) no ocurrirá nada, ya que el replicaset solo mira el numero de pods que corresponden al label definido dentro de la etiqueta metadata, por lo que no puede cambiar los pods ni configuraciones
+
+
+## Deployments
+
+Un deployment es un objeto que está por encima de un replicaset y por encima del pod
+
+MaxAvailable -> cuantos pods voy a permitir que esté fuera de servicio, por defecto 25%
+
+MaxSearch -> cuanto voy a permitir adicional al 100% para que se creen pods nuevos, es decir si ya tengo 4 pods, cuantos permito tener de más
+
+Kubernetes por defecto mantiene 10 replicaSets
+
+Para mostrar labels de un deployment por ejemplo
+```bash
+kubectl get deployment --show-labels
+```
+
+Comando para verificar si el rollout del deployment ha sido un exito
+
+```bash
+kubectl rollout status deployment <nombreDeployment>
+kubectl rollout status deployment deployment-test
+```
+
+### OwnerReferences en deployment

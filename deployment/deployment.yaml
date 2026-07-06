@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-test
+  labels:
+    app: front
+# Hasta aqui lo que es el deployment
+# Desde aqui el replicaset
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: front
+# Desde aqui el pod que se creará
+  template:
+    metadata:
+      labels:
+        app: front
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
