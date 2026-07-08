@@ -235,3 +235,42 @@ Events:
   Normal  ScalingReplicaSet  80s                deployment-controller  Scaled up replica set deployment-test-6cf85c55cf to 2 from 1
   Normal  ScalingReplicaSet  74s (x3 over 77s)  deployment-controller  (combined from similar events): Scaled down replica set deployment-test-69b6fb5cb6 to 0 from 1
 ```
+
+### Historico y revisiones de un deployment
+
+```bash
+kubectl rollout history deployment deployment-test
+```
+
+Con esto veremos las revisiones o los rollouts que hemos ejecutado
+
+### Change-cause en un deployment
+
+3 maneras
+
+
+```bash
+kubectl apply -f deployment.yaml --record
+```
+Esta manera esta deprecated, se recomienda usar esta
+
+```bash
+metadata:
+  annotations: 
+    # Anotacion para definir una causa de cambio en el deployment
+    kubernetes.io/change-cause: Changes port to 120
+```
+
+Ejecutando el comando siguiente:
+
+```bash
+kubectl annotate deployement.v1.apps/nginx-deployment kubernetes.io.....
+```
+No sigo porque es muy tedioso
+
+
+#### Para ver las revisiones por linea de comando
+
+```bash
+kubectl rollout history deploy deployment-test --revision=3
+```
