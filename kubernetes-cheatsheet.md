@@ -190,3 +190,48 @@ kubectl rollout status deployment deployment-test
 ```
 
 ### OwnerReferences en deployment
+
+Un pod va a tener como ownerReference un replicaset y un replicaset va a tener como ownerReference a un deployment siempre
+
+No pueden saltarse, es decir, un pod no puede tener como ownerReference a un deployment
+
+
+## Rolling Updates de deployments
+```bash
+kubectl apply -f deployment.yaml
+```
+
+Si aplicamos el comando de apply -f al yaml del deployment con algun cambio éste, dependiendo de lo que tenga configurado, eliminará y creará pods con las nuevas especificaciones
+
+Con el comando 
+
+```bash
+kubectl rollout status deployment <nombreDeployment>
+```
+
+Vemos si ha sido exitoso el rollout, es decir, el cambio aplicado a los pods
+
+Si hacemos un describe
+
+```bash
+kubectl describe deploy deployment-test
+```
+
+Podemos ver el siguiente output
+
+```
+Events:
+  Type    Reason             Age                From                   Message
+  ----    ------             ----               ----                   -------
+  Normal  ScalingReplicaSet  43h                deployment-controller  Scaled up replica set deployment-test-6cf85c55cf to 3
+  Normal  ScalingReplicaSet  2m36s              deployment-controller  Scaled up replica set deployment-test-69b6fb5cb6 to 1
+  Normal  ScalingReplicaSet  2m31s              deployment-controller  Scaled down replica set deployment-test-6cf85c55cf to 2 from 3
+  Normal  ScalingReplicaSet  2m31s              deployment-controller  Scaled up replica set deployment-test-69b6fb5cb6 to 2 from 1
+  Normal  ScalingReplicaSet  2m26s              deployment-controller  Scaled down replica set deployment-test-6cf85c55cf to 1 from 2
+  Normal  ScalingReplicaSet  2m25s              deployment-controller  Scaled up replica set deployment-test-69b6fb5cb6 to 3 from 2
+  Normal  ScalingReplicaSet  2m19s              deployment-controller  Scaled down replica set deployment-test-6cf85c55cf to 0 from 1
+  Normal  ScalingReplicaSet  83s                deployment-controller  Scaled up replica set deployment-test-6cf85c55cf to 1 from 0
+  Normal  ScalingReplicaSet  81s                deployment-controller  Scaled down replica set deployment-test-69b6fb5cb6 to 2 from 3
+  Normal  ScalingReplicaSet  80s                deployment-controller  Scaled up replica set deployment-test-6cf85c55cf to 2 from 1
+  Normal  ScalingReplicaSet  74s (x3 over 77s)  deployment-controller  (combined from similar events): Scaled down replica set deployment-test-69b6fb5cb6 to 0 from 1
+```
