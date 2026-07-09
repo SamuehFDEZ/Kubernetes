@@ -418,7 +418,10 @@ docker run --rm -dti -v $PWD/:/go --net host --name golang golang bash
 
 
 ¡IMPORTANTE! el apartado "$PWD" es para linux, en cmd seria
-docker run --rm -dti -v %cd%:/go -p 9090:9090 --name golang golang bash
+
+docker run --rm -it -v %cd%:/go -p 9090:9090 --name golang -w /go golang go run main.go
+
+Todo eso para arrancar directamente la aplicacion en go
 
 y en powershell
 docker run --rm -dti -v ${PWD}:/go --net host --name golang golang bash
