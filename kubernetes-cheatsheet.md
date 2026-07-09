@@ -396,6 +396,33 @@ curl <IP>:8080
 | ☁️ **LoadBalancer** | Kubernetes no proporciona balanceadores por defecto; se usan típicamente en entornos cloud. |
  
 ---
+
+## Hands on K8s
+
+API de golang primero crearemos contenedor de docker
+
+
+docker run --rm -dti -v $PWD/:/go --net host --name golang golang bash
+
+- docker run — crea y arranca un nuevo contenedor.
+- --rm — al parar el contenedor, Docker lo elimina automáticamente (no deja basura de contenedores parados).
+- -d — modo detached: el contenedor corre en segundo plano, no se queda "enganchado" a tu terminal.
+- -t — asigna una pseudo-terminal (TTY) al contenedor.
+- -i — modo interactivo, mantiene abierto el stdin aunque no estés conectado.
+- -dti es simplemente la combinación de esas tres flags juntas.
+- -v $PWD/:/go — monta (bind mount) el directorio actual de tu máquina host ($PWD, es decir, donde ejecutas el comando) dentro del contenedor, en la ruta /go. Esto significa que todo lo que haya en tu carpeta actual será visible y editable desde dentro del contenedor en /go, y viceversa. /go es justo el GOPATH por defecto de la imagen oficial de Golang, así que es una forma típica de montar tu código para compilarlo/ejecutarlo dentro del contenedor.
+- --net host — el contenedor usa directamente la red del host, en lugar de tener su propia red aislada (bridge). Esto significa que si el proceso dentro del contenedor abre un puerto (por ejemplo :8080), estará accesible directamente en localhost:8080 de tu máquina, sin necesidad de mapear puertos con -p. (Nota: --net host solo funciona así en Linux; en Docker Desktop para Windows/Mac tiene comportamiento limitado o distinto).
+- --name golang — le pone el nombre golang al contenedor, para poder referirte a él fácilmente (docker exec -it golang ..., docker stop golang, etc.) en lugar de usar el ID aleatorio.
+- golang — la imagen que se usa para crear el contenedor (la imagen oficial de Go en Docker Hub).
+- bash — el comando que se ejecuta dentro del contenedor al arrancar; en vez del entrypoint por defecto de la imagen, abre una shell bash.
+
+
+¡IMPORTANTE! el apartado "$PWD" es para linux, en cmd seria
+docker run --rm -dti -v %cd%:/go -p 9090:9090 --name golang golang bash
+
+y en powershell
+docker run --rm -dti -v ${PWD}:/go --net host --name golang golang bash
+
  
 <div align="center">
 📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel* 
