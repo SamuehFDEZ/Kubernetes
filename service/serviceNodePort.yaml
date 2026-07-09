@@ -4,9 +4,9 @@ metadata:
   annotations: 
     # Anotacion para definir una causa de cambio en el deployment
     kubernetes.io/change-cause: Changes port to 120
-  name: deployment-test
+  name: deployment-test1
   labels:
-    app: front
+    app: backend
 # Hasta aqui lo que es el deployment
 # Desde aqui el replicaset
 spec:
@@ -15,15 +15,30 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: front
+      app: backend
 # Desde aqui el pod que se creará
   template:
     metadata:
       labels:
-        app: front
+        app: backend
     spec:
       containers:
       - name: nginx
-        image: nginx:testfake
-        ports:
-          - containerPort: 120
+        image: nginx:alpine
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service1
+  labels:
+    app: backend
+spec:
+  type: NodePort
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      # que puerto del pod voy a consumir
+      targetPort: 80

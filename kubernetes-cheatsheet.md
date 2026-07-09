@@ -1,88 +1,125 @@
-# Cheatsheet de kubernetes
+<div align="center">
 
+# ☸️ Kubernetes Cheatsheet
+ 
+### Guía de referencia rápida: Pods, ReplicaSets, Deployments y Servicios
+ 
+---
+ 
+📦 `kubectl` · 🐳 `Docker Desktop` · 🧭 `Manifiestos YAML`
+ 
+</div>
 
-## Crear pods
-
-## Start a nginx pod
+---
+ 
+## 📑 Índice
+ 
+1. [🚀 Crear pods](#-crear-pods)
+2. [🔍 Obtener y gestionar pods](#-obtener-y-gestionar-pods)
+3. [📄 Manifiestos de Kubernetes](#-manifiestos-de-kubernetes)
+4. [🏷️ Labels](#️-labels)
+5. [⚠️ Problemas de los pods](#️-problemas-de-los-pods)
+6. [🧬 ReplicaSet](#-replicaset)
+7. [🚢 Deployments](#-deployments)
+8. [🔄 Rolling Updates](#-rolling-updates-de-deployments)
+9. [📜 Histórico y revisiones](#-histórico-y-revisiones-de-un-deployment)
+10. [⏪ Rollbacks](#-rollbacks)
+11. [🌐 Servicios](#-servicios)
+---
+ 
+## 🚀 Crear pods
+ 
+### ▶️ Iniciar un pod nginx
 ```bash
 kubectl run nginx --image=nginx
 ```
-## Start a hazelcast pod and let the container expose port 5701
+ 
+### ▶️ Iniciar un pod hazelcast exponiendo el puerto 5701
 ```bash
 kubectl run hazelcast --image=hazelcast/hazelcast --port=5701
 ```
-## Start a hazelcast pod and set environment variables "DNS_DOMAIN=cluster" and "POD_NAMESPACE=default" in the container
+ 
+### ▶️ Iniciar un pod hazelcast con variables de entorno
+Define `DNS_DOMAIN=cluster` y `POD_NAMESPACE=default` en el contenedor:
 ```bash
 kubectl run hazelcast --image=hazelcast/hazelcast --env="DNS_DOMAIN=cluster" --env="POD_NAMESPACE=default"
 ```
-## Start a hazelcast pod and set labels "app=hazelcast" and "env=prod" in the container
+ 
+### 🏷️ Iniciar un pod hazelcast con labels
+Define `app=hazelcast` y `env=prod`:
 ```bash
 kubectl run hazelcast --image=hazelcast/hazelcast --labels="app=hazelcast,env=prod"
 ```
-## Dry run; print the corresponding API objects without creating them
+ 
+### 🧪 Dry run
+Imprime los objetos de la API sin crearlos:
 ```bash
 kubectl run nginx --image=nginx --dry-run=client
 ```
-## Start a nginx pod, but overload the spec with a partial set of values parsed from JSON
+ 
+### ⚙️ Pod con spec sobrescrita mediante JSON
 ```bash
 kubectl run nginx --image=nginx --overrides='{ "apiVersion": "v1", "spec": { ... } }'
 ```
-## Start a busybox pod and keep it in the foreground, don't restart it if it exits
+ 
+### 📦 Pod busybox interactivo, sin reinicio
 ```bash
 kubectl run -i -t busybox --image=busybox --restart=Never
 ```
-## Start the nginx pod using the default command, but use custom arguments (arg1 .. argN) for that command
+ 
+### 🎯 Comando por defecto con argumentos personalizados
 ```bash
 kubectl run nginx --image=nginx -- <arg1> <arg2> ... <argN>
 ```
-## Start the nginx pod using a different command and custom arguments
+ 
+### 🛠️ Comando y argumentos personalizados
 ```bash
 kubectl run nginx --image=nginx --command -- <cmd> <arg1> ... <argN>
 ```
---- 
-
-## Obtener pods
-
+ 
+---
+ 
+## 🔍 Obtener y gestionar pods
+ 
+### 📋 Obtener pods
 ```bash
 kubectl get pod
 ```
---- 
-
-## Borrar pods
-
+ 
+### 🗑️ Borrar pods
 ```bash
 kubectl delete pod <nombre>
 ```
-
-## Obtener pod detalladamente
+ 
+### 🔬 Obtener detalle de un pod
 ```bash
 kubectl get pod <nombre> -o yaml
 ```
-
-
-## Mapear puerto en kubernetes
+ 
+### 🔌 Mapear puerto en Kubernetes
 ```bash
 kubectl port-forward pod/podtest 8080:80
 ```
-
-## Entrar en la linea de comandos del pod
+ 
+### 💻 Entrar en la línea de comandos del pod
 ```bash
 kubectl exec -it podtest -- sh
 ```
-
-## Ver logs de pods
+ 
+### 📃 Ver logs de un pod
 ```bash
 kubectl logs podtest -f
 ```
-
-## Manifiestos de kubernetes
-#### los yamls 
-
-Ver template de pod en
-https://kubernetes.io/docs/concepts/workloads/pods/
-
-
-```
+ 
+---
+ 
+## 📄 Manifiestos de Kubernetes
+ 
+Los YAML son la forma declarativa de definir objetos en Kubernetes.
+ 
+📖 Plantilla oficial de pod: https://kubernetes.io/docs/concepts/workloads/pods/
+ 
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -91,134 +128,126 @@ spec:
   containers:
   - name: cont1
     image: nginx:alpine
-    # The pod template ends here
+    # El template del pod termina aquí
 ```
-
-
-
-## Ver versiones y recursos de api de kubernetes
+ 
+### 🔎 Ver versiones y recursos de la API
 ```bash
 kubectl api-versions
 ```
-
+ 
 ```bash
 kubectl api-resources | grep Pod
 ```
-
-
-## Labels
-Dentro de metadata se asigna un array de labels, ejemplo:
-Siempre asignar al menos el label de app
-
-```bash
+ 
+---
+ 
+## 🏷️ Labels
+ 
+Dentro de `metadata` se asigna un array de labels.
+ 
+> 💡 **Buena práctica:** asigna siempre al menos el label `app`.
+ 
+```yaml
 metadata:
   name: podtest2
   labels:
     app: front
     env: dev
 ```
-
-
+ 
+### 🔍 Filtrar pods por label
 ```bash
 kubectl get pods -l app=backend
 ```
-
-
-## Problemas de los pods
-
-- Sin self-healing (No se autoregeneran)
-- Si quieres crear masivamente pods tienes que hacerlo manualmente en el yaml
-- Los pods no tienen autorefresh, es decir, no se actualizan solos
-
-
-## Replicaset
-
-- Objeto superior a los pods
-- Se "adueña" de ellos y los crea
-- Agrega al metadata de los pods el valor owner, referenciando a qué replicaset pertenecen
-- Otro replicaset no puede tomar un pod que ya tenga owner
-
-### Para obtener replicasets por shortname
+ 
+---
+ 
+## ⚠️ Problemas de los pods
+ 
+- ❌ Sin **self-healing** (no se regeneran solos)
+- ✍️ Crear pods masivamente requiere hacerlo manualmente en el YAML
+- 🔄 Sin **auto-refresh**: no se actualizan solos
+---
+ 
+## 🧬 ReplicaSet
+ 
+- 🔼 Objeto superior a los pods
+- 🤝 Se "adueña" de ellos y los crea
+- 🏷️ Agrega al `metadata` de los pods el valor `owner`, referenciando a qué ReplicaSet pertenecen
+- 🚫 Otro ReplicaSet no puede tomar un pod que ya tenga owner
+### 📋 Obtener ReplicaSets (shortname `rs`)
 ```bash
 kubectl get rs
 ```
-rs de replicaset eso se puede consultar en
-
-```bash
-kubectl api-resources
-```
-
-## Para agregar labels a pods sin owner
+> ℹ️ Puedes consultar los shortnames disponibles con `kubectl api-resources`
+ 
+### 🏷️ Agregar labels a pods sin owner
 ```bash
 kubectl label pods podtest1 app=pod-label
 ```
-
-Al crear dos pods diferentes con el mismo label, el replicaSet adopta esos pods como suyos y agrega a la metadata ownerReferences la referencia del replicaSet
-
-¡Problema! los pods son totalmente distintos pero para el replicaset son iguales debido al label que comparten
-
-Es por ello que los pods han de ser creados por unidades u objetos mayores, ya sean replicasets o deployments
-
-
-## Problemas de ReplicaSet
-
-El concepto general es que debe mantener un numero n de replicas de un pod segun lo que digamos en el manifiesto (yaml)
-
-En el caso de que se quiera hacer un cambio en plano al pod (directamente a él) no ocurrirá nada, ya que el replicaset solo mira el numero de pods que corresponden al label definido dentro de la etiqueta metadata, por lo que no puede cambiar los pods ni configuraciones
-
-
-## Deployments
-
-Un deployment es un objeto que está por encima de un replicaset y por encima del pod
-
-MaxAvailable -> cuantos pods voy a permitir que esté fuera de servicio, por defecto 25%
-
-MaxSearch -> cuanto voy a permitir adicional al 100% para que se creen pods nuevos, es decir si ya tengo 4 pods, cuantos permito tener de más
-
-Kubernetes por defecto mantiene 10 replicaSets
-
-Para mostrar labels de un deployment por ejemplo
+ 
+> ⚠️ **Cuidado:** al crear dos pods diferentes con el mismo label, el ReplicaSet los adopta como suyos y agrega a `ownerReferences` la referencia del ReplicaSet — aunque los pods sean totalmente distintos entre sí, para el ReplicaSet son "iguales" por compartir label.
+>
+> Por eso, los pods deben crearse siempre mediante unidades u objetos superiores: **ReplicaSets** o **Deployments**.
+ 
+### 🐛 Problemas de ReplicaSet
+ 
+El ReplicaSet mantiene un número `n` de réplicas de un pod según lo definido en el manifiesto YAML.
+ 
+Si se modifica un pod directamente (en caliente), **no ocurre nada**: el ReplicaSet solo vigila el número de pods que coinciden con el label definido en `metadata`, por lo que no puede cambiar los pods ni sus configuraciones.
+ 
+---
+ 
+## 🚢 Deployments
+ 
+Un Deployment es un objeto que está por encima de un ReplicaSet, y este a su vez por encima del pod.
+ 
+| Parámetro | Descripción | Valor por defecto |
+|---|---|---|
+| 🔽 `MaxAvailable` | Cuántos pods se permiten fuera de servicio | 25% |
+| 🔼 `MaxSearch` | Pods adicionales permitidos al crear nuevos | — |
+| 🗂️ Historial | ReplicaSets que Kubernetes mantiene por defecto | 10 |
+ 
+### 🏷️ Mostrar labels de un deployment
 ```bash
 kubectl get deployment --show-labels
 ```
-
-Comando para verificar si el rollout del deployment ha sido un exito
-
+ 
+### ✅ Verificar el éxito del rollout
 ```bash
 kubectl rollout status deployment <nombreDeployment>
 kubectl rollout status deployment deployment-test
 ```
-
-### OwnerReferences en deployment
-
-Un pod va a tener como ownerReference un replicaset y un replicaset va a tener como ownerReference a un deployment siempre
-
-No pueden saltarse, es decir, un pod no puede tener como ownerReference a un deployment
-
-
-## Rolling Updates de deployments
+ 
+### 🔗 OwnerReferences en Deployment
+ 
+- Un **pod** tiene como `ownerReference` a un **ReplicaSet**
+- Un **ReplicaSet** tiene como `ownerReference` a un **Deployment**
+🚫 Esta jerarquía no puede saltarse: un pod nunca puede tener como `ownerReference` directamente a un Deployment.
+ 
+---
+ 
+## 🔄 Rolling Updates de Deployments
+ 
 ```bash
 kubectl apply -f deployment.yaml
 ```
-
-Si aplicamos el comando de apply -f al yaml del deployment con algun cambio éste, dependiendo de lo que tenga configurado, eliminará y creará pods con las nuevas especificaciones
-
-Con el comando 
-
+ 
+Al aplicar `apply -f` sobre el YAML del Deployment con algún cambio, este eliminará y creará pods con las nuevas especificaciones (según su estrategia configurada).
+ 
+### ✅ Comprobar el estado del rollout
 ```bash
 kubectl rollout status deployment <nombreDeployment>
 ```
-
-Vemos si ha sido exitoso el rollout, es decir, el cambio aplicado a los pods
-
-Si hacemos un describe
-
+ 
+### 🔬 Ver detalle con describe
 ```bash
 kubectl describe deploy deployment-test
 ```
-
-Podemos ver el siguiente output
-
+ 
+<details>
+<summary>📋 Ejemplo de salida (Events)</summary>
 ```
 Events:
   Type    Reason             Age                From                   Message
@@ -235,42 +264,140 @@ Events:
   Normal  ScalingReplicaSet  80s                deployment-controller  Scaled up replica set deployment-test-6cf85c55cf to 2 from 1
   Normal  ScalingReplicaSet  74s (x3 over 77s)  deployment-controller  (combined from similar events): Scaled down replica set deployment-test-69b6fb5cb6 to 0 from 1
 ```
-
-### Historico y revisiones de un deployment
-
+</details>
+---
+ 
+## 📜 Histórico y revisiones de un Deployment
+ 
 ```bash
 kubectl rollout history deployment deployment-test
 ```
-
-Con esto veremos las revisiones o los rollouts que hemos ejecutado
-
-### Change-cause en un deployment
-
-3 maneras
-
-
+Muestra las revisiones o rollouts ejecutados.
+ 
+### 🏷️ Change-cause en un Deployment
+ 
+Existen 3 maneras de definirlo:
+ 
+**1️⃣ Flag `--record`** *(deprecated ⚠️, no se recomienda su uso)*
 ```bash
 kubectl apply -f deployment.yaml --record
 ```
-Esta manera esta deprecated, se recomienda usar esta
-
-```bash
+ 
+**2️⃣ Anotación en el YAML** ✅ *(recomendada)*
+```yaml
 metadata:
-  annotations: 
-    # Anotacion para definir una causa de cambio en el deployment
+  annotations:
+    # Anotación para definir una causa de cambio en el deployment
     kubernetes.io/change-cause: Changes port to 120
 ```
-
-Ejecutando el comando siguiente:
-
+ 
+**3️⃣ Comando `annotate`**
 ```bash
-kubectl annotate deployement.v1.apps/nginx-deployment kubernetes.io.....
+kubectl annotate deployment.v1.apps/nginx-deployment kubernetes.io/change-cause="..."
 ```
-No sigo porque es muy tedioso
-
-
-#### Para ver las revisiones por linea de comando
-
+ 
+### 🔎 Ver una revisión concreta
 ```bash
 kubectl rollout history deploy deployment-test --revision=3
 ```
+ 
+---
+ 
+## ⏪ Rollbacks
+ 
+Para volver a una versión anterior de un Deployment:
+ 
+```bash
+kubectl rollout undo deploy deployment-test --to-revision=3
+```
+ 
+> 💡 **Nota:** Kubernetes guarda por defecto hasta **10 revisiones** para poder volver atrás.
+ 
+---
+ 
+## 🌐 Servicios
+ 
+Un servicio es un objeto que observa pods con cierto label (por ejemplo, `app=web`) y les proporciona:
+ 
+- 🔒 Una **IP única** garantizada en el tiempo
+- ⚖️ **Balanceo de carga** entre los pods disponibles (algoritmo de distribución aleatoria)
+- 🌍 Un **DNS** consultable por el usuario
+- 👀 Visibilidad sobre pods con cierto label, estén o no dentro de un ReplicaSet
+### 🔗 Endpoints en un servicio
+ 
+| | IP de Servicio | IP de Pod |
+|---|---|---|
+| Estabilidad | ✅ No cambia | ⚠️ Puede cambiar (el pod puede morir) |
+ 
+El objeto **Endpoints** es una lista de IPs de los pods que cumplen el label del servicio:
+ 
+- 🆕 Si nace un pod nuevo → se agrega su IP al endpoint
+- ☠️ Si un pod muere → el servicio detecta la baja y elimina su IP del endpoint
+De esta forma se mantiene la disponibilidad e integridad del tráfico.
+ 
+### 🔬 Descripción de servicios
+ 
+Por defecto, un servicio se crea de tipo `ClusterIP` (IP virtual):
+ 
+```bash
+kubectl describe svc my-service
+```
+ 
+<details>
+<summary>📋 Ejemplo de salida</summary>
+```
+Name:              my-service
+Namespace:         default
+Labels:            app=front
+Annotations:       <none>
+Selector:          app=front
+Type:              ClusterIP
+IP Family Policy:  SingleStack
+IP Families:       IPv4
+IP:                10.101.207.125
+IPs:               10.101.207.125
+Port:              <unset>  8080/TCP
+TargetPort:        80/TCP
+Endpoints:         10.1.0.127:80,10.1.0.128:80,10.1.0.129:80
+Session Affinity:  None
+Events:            <none>
+```
+</details>
+```bash
+kubectl get po -l app=front -o wide
+```
+ 
+<details>
+<summary>📋 Ejemplo de salida</summary>
+```
+NAME                               READY   STATUS    RESTARTS   AGE     IP           NODE             NOMINATED NODE   READINESS GATES
+deployment-test-6cf85c55cf-mr254   1/1     Running   0          6m35s   10.1.0.129   docker-desktop   <none>           <none>
+deployment-test-6cf85c55cf-s7xzc   1/1     Running   0          6m40s   10.1.0.127   docker-desktop   <none>           <none>
+deployment-test-6cf85c55cf-wstdh   1/1     Running   0          6m38s   10.1.0.128   docker-desktop   <none>           <none>
+```
+</details>
+> 🚫 **No es recomendable** crear pods fuera de ReplicaSets, como se ha comentado anteriormente.
+ 
+### 🌍 Servicios y DNS
+ 
+Cada servicio aporta su propio DNS. Se puede consultar por IP o por nombre DNS:
+ 
+```bash
+curl my-service:8080
+curl <IP>:8080
+```
+ 
+### 🗂️ Tipos de servicios
+ 
+| Tipo | Descripción |
+|---|---|
+| 🏠 **ClusterIP** | IP virtual asignada por Kubernetes, permanente en el tiempo. No accesible desde fuera del cluster. |
+| 🚪 **NodePort** | Expone el servicio fuera del cluster a nivel de nodo. Rango de puertos por defecto: `30000-32767`. |
+| ☁️ **LoadBalancer** | Kubernetes no proporciona balanceadores por defecto; se usan típicamente en entornos cloud. |
+ 
+---
+ 
+<div align="center">
+📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel* 
+ 
+</div>

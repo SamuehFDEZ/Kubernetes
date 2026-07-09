@@ -24,6 +24,21 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:testfake
-        ports:
-          - containerPort: 120
+        image: nginx:alpine
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  labels:
+    app: front
+spec:
+  type: ClusterIP
+  selector:
+    app: front
+  ports:
+    - protocol: TCP
+      port: 8080
+      # que puerto del pod voy a consumir
+      targetPort: 80
