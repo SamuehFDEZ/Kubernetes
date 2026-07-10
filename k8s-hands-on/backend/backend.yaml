@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations: 
+    # Anotacion para definir una causa de cambio en el deployment
+    kubernetes.io/change-cause: Changes port to 120
+  name: backend-k8s-hands-on
+  labels:
+    app: backend
+# Hasta aqui lo que es el deployment
+# Desde aqui el replicaset
+spec:
+  # cuantos replicaSet queremos guardar en un futro
+  #revisionHistoryLimit: 1
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+# Desde aqui el pod que se creará
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: k8s-hands-on
+        # Para que mire si hay imagenes localmente
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-k8s-hands-on
+  labels:
+    app: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      # que puerto del pod voy a consumir
+      targetPort: 9090
