@@ -476,6 +476,46 @@ Y veremos el nuevo contexto
 kubectl config use-context ci-context
 Switched to context "ci-context".
 
+## Limites
+
+Limites de RAM
+  - bytes
+  - megabytes
+  - gigabytes
+
+Limites de CPU
+  - 100 mc (milicores)
+
+### Limits y requests
+
+- Limits: si tenemos un limite de 30 MB quiere decir que permitimos 10 MB adicionales al pod 
+
+- Requests: cuanto se va a dar a x pod recursos garantizados, si por ejemplo necesita 20 MB de de RAM la request dedicará esos 20 MB a ese pod
+
+En otras palabras los limites sirven para poder exceder los recursos hasta un número definido, todo dependerá, eso si, si el nodo tiene ese espacio de MB o GB, en el caso de que el pod se pase, kubernetes reinciará o eliminar el pod
+
+
+OOMKilled es un estado que usa kubernetes cuando el pod está Out Of Memory
+
+Pending estado cuando un pod espera un nodo para satisfacer sus requisitos de RAM y CPU
+
+#### Limitar recursos de CPU
+
+ver fichero yaml limit-cpu
+
+Para diagnosticar los recursos que usa nuestro cluster de kubernetes podemos usar este comando
+
+kubectl describe nodes <nombre-del-cluster>
+
+
+## QOS Quality Of Service
+
+- Guaranteed: pods que aquellos limites y recursos son iguales
+
+- Burstable: pods que tienen recursos que trabajan por debajo de lo limitado que pueden exceder durante un tiempo esa cantidad de recursos especificada en el manifiesto
+
+- BestEffort: pods que no definen ningun limite, estos son los mas peligrosos pues no cuentan con limite, consumiendo recursos hasta destruir un nodo
+
 <div align="center">
 📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel* 
  
