@@ -1,19 +1,19 @@
 <div align="center">
 
 # ☸️ Kubernetes Cheatsheet
- 
-### Guía de referencia rápida: Pods, ReplicaSets, Deployments y Servicios
- 
+
+### Guía de referencia rápida: Pods, ReplicaSets, Deployments, Servicios, Namespaces y Recursos
+
 ---
- 
+
 📦 `kubectl` · 🐳 `Docker Desktop` · 🧭 `Manifiestos YAML`
- 
+
 </div>
 
 ---
- 
+
 ## 📑 Índice
- 
+
 1. [🚀 Crear pods](#-crear-pods)
 2. [🔍 Obtener y gestionar pods](#-obtener-y-gestionar-pods)
 3. [📄 Manifiestos de Kubernetes](#-manifiestos-de-kubernetes)
@@ -25,100 +25,115 @@
 9. [📜 Histórico y revisiones](#-histórico-y-revisiones-de-un-deployment)
 10. [⏪ Rollbacks](#-rollbacks)
 11. [🌐 Servicios](#-servicios)
+12. [🐹 Hands-on: app Go en Docker + Kubernetes](#-hands-on-app-go-en-docker--kubernetes)
+13. [🗂️ Namespaces](#️-namespaces)
+14. [🧭 Contextos](#-contextos)
+15. [📏 Límites de recursos (Limits & Requests)](#-límites-de-recursos-limits--requests)
+16. [🎚️ Quality of Service (QoS)](#️-quality-of-service-qos)
+17. [🚧 LimitRange](#-limitrange)
+18. [📊 ResourceQuota](#-resourcequota)
+
 ---
- 
+
 ## 🚀 Crear pods
- 
+
 ### ▶️ Iniciar un pod nginx
 ```bash
 kubectl run nginx --image=nginx
 ```
- 
+
 ### ▶️ Iniciar un pod hazelcast exponiendo el puerto 5701
 ```bash
 kubectl run hazelcast --image=hazelcast/hazelcast --port=5701
 ```
- 
+
 ### ▶️ Iniciar un pod hazelcast con variables de entorno
 Define `DNS_DOMAIN=cluster` y `POD_NAMESPACE=default` en el contenedor:
 ```bash
 kubectl run hazelcast --image=hazelcast/hazelcast --env="DNS_DOMAIN=cluster" --env="POD_NAMESPACE=default"
 ```
- 
+
 ### 🏷️ Iniciar un pod hazelcast con labels
 Define `app=hazelcast` y `env=prod`:
 ```bash
 kubectl run hazelcast --image=hazelcast/hazelcast --labels="app=hazelcast,env=prod"
 ```
- 
+
 ### 🧪 Dry run
-Imprime los objetos de la API sin crearlos:
+Genera y muestra el manifiesto que se enviaría a la API, sin crear el objeto realmente. Es la forma más rápida de generar YAML de partida sin memorizar la sintaxis:
 ```bash
-kubectl run nginx --image=nginx --dry-run=client
+kubectl run nginx --image=nginx --dry-run=client -o yaml
 ```
- 
+> 💡 **Truco:** combina `--dry-run=client -o yaml` con `> pod.yaml` para generar plantillas base al vuelo y luego editarlas, en vez de escribir el YAML desde cero.
+
 ### ⚙️ Pod con spec sobrescrita mediante JSON
+Permite sobrescribir campos puntuales del spec generado sin tener que reescribir todo el manifiesto:
 ```bash
 kubectl run nginx --image=nginx --overrides='{ "apiVersion": "v1", "spec": { ... } }'
 ```
- 
-### 📦 Pod busybox interactivo, sin reinicio
+
+### 📦 Pod busybox interactivo, autolimpiable
+`-i -t` (o `-it`) abren una sesión interactiva con TTY; `--rm` borra el pod en cuanto termina la sesión, muy útil para pods "de usar y tirar" de debug:
 ```bash
-kubectl run -i -t busybox --image=busybox --restart=Never
+kubectl run -i -t busybox --image=busybox --restart=Never --rm
 ```
- 
+
 ### 🎯 Comando por defecto con argumentos personalizados
+Mantiene el `ENTRYPOINT` de la imagen pero le pasa argumentos distintos:
 ```bash
 kubectl run nginx --image=nginx -- <arg1> <arg2> ... <argN>
 ```
- 
+
 ### 🛠️ Comando y argumentos personalizados
+Sustituye por completo el `ENTRYPOINT` de la imagen por el comando indicado:
 ```bash
 kubectl run nginx --image=nginx --command -- <cmd> <arg1> ... <argN>
 ```
- 
+
 ---
- 
+
 ## 🔍 Obtener y gestionar pods
- 
+
 ### 📋 Obtener pods
 ```bash
 kubectl get pod
 ```
- 
+
 ### 🗑️ Borrar pods
 ```bash
 kubectl delete pod <nombre>
 ```
- 
+
 ### 🔬 Obtener detalle de un pod
 ```bash
 kubectl get pod <nombre> -o yaml
 ```
- 
+
 ### 🔌 Mapear puerto en Kubernetes
+Redirige un puerto local hacia el puerto de un pod, sin necesidad de exponer un Service. Ideal para depurar sin tocar la red del cluster:
 ```bash
 kubectl port-forward pod/podtest 8080:80
 ```
- 
+
 ### 💻 Entrar en la línea de comandos del pod
 ```bash
 kubectl exec -it podtest -- sh
 ```
- 
+
 ### 📃 Ver logs de un pod
+El flag `-f` (`--follow`) mantiene el stream de logs abierto en tiempo real, como un `tail -f`:
 ```bash
 kubectl logs podtest -f
 ```
- 
+
 ---
- 
+
 ## 📄 Manifiestos de Kubernetes
- 
-Los YAML son la forma declarativa de definir objetos en Kubernetes.
- 
+
+Los YAML son la forma **declarativa** de definir objetos en Kubernetes: describes el estado deseado y el control plane se encarga de converger hacia él, en lugar de ejecutar comandos imperativos paso a paso.
+
 📖 Plantilla oficial de pod: https://kubernetes.io/docs/concepts/workloads/pods/
- 
+
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -130,24 +145,24 @@ spec:
     image: nginx:alpine
     # El template del pod termina aquí
 ```
- 
+
 ### 🔎 Ver versiones y recursos de la API
 ```bash
 kubectl api-versions
 ```
- 
+
 ```bash
 kubectl api-resources | grep Pod
 ```
- 
+
 ---
- 
+
 ## 🏷️ Labels
- 
-Dentro de `metadata` se asigna un array de labels.
- 
+
+Dentro de `metadata` se asigna un array de labels: pares clave-valor que sirven para identificar y **seleccionar** objetos (por ReplicaSets, Services, `kubectl get -l`, etc.). No confundir con las *annotations*, que son solo metadatos informativos sin capacidad de selección.
+
 > 💡 **Buena práctica:** asigna siempre al menos el label `app`.
- 
+
 ```yaml
 metadata:
   name: podtest2
@@ -155,99 +170,105 @@ metadata:
     app: front
     env: dev
 ```
- 
+
 ### 🔍 Filtrar pods por label
 ```bash
 kubectl get pods -l app=backend
 ```
- 
+
 ---
- 
+
 ## ⚠️ Problemas de los pods
- 
-- ❌ Sin **self-healing** (no se regeneran solos)
-- ✍️ Crear pods masivamente requiere hacerlo manualmente en el YAML
-- 🔄 Sin **auto-refresh**: no se actualizan solos
+
+- ❌ Sin **self-healing**: si un pod muere, nadie lo vuelve a crear automáticamente.
+- ✍️ Crear pods masivamente requiere hacerlo manualmente, uno a uno, en el YAML.
+- 🔄 Sin **auto-refresh**: si cambias la imagen o la config, el pod no se actualiza solo.
+
+> Estos tres problemas son exactamente lo que resuelven los objetos de nivel superior (ReplicaSet y Deployment) que se explican a continuación.
+
 ---
- 
+
 ## 🧬 ReplicaSet
- 
-- 🔼 Objeto superior a los pods
-- 🤝 Se "adueña" de ellos y los crea
-- 🏷️ Agrega al `metadata` de los pods el valor `owner`, referenciando a qué ReplicaSet pertenecen
-- 🚫 Otro ReplicaSet no puede tomar un pod que ya tenga owner
+
+- 🔼 Objeto superior a los pods: define cuántas réplicas de un pod deben existir en todo momento.
+- 🤝 Se "adueña" de los pods que coinciden con su `selector` y los crea si faltan.
+- 🏷️ Agrega a los pods una referencia (`ownerReferences`) indicando a qué ReplicaSet pertenecen.
+- 🚫 Un pod que ya tiene owner no puede ser adoptado por otro ReplicaSet distinto.
+
 ### 📋 Obtener ReplicaSets (shortname `rs`)
 ```bash
 kubectl get rs
 ```
-> ℹ️ Puedes consultar los shortnames disponibles con `kubectl api-resources`
- 
+> ℹ️ Puedes consultar todos los shortnames disponibles con `kubectl api-resources`.
+
 ### 🏷️ Agregar labels a pods sin owner
 ```bash
 kubectl label pods podtest1 app=pod-label
 ```
- 
-> ⚠️ **Cuidado:** al crear dos pods diferentes con el mismo label, el ReplicaSet los adopta como suyos y agrega a `ownerReferences` la referencia del ReplicaSet — aunque los pods sean totalmente distintos entre sí, para el ReplicaSet son "iguales" por compartir label.
+
+> ⚠️ **Cuidado:** si creas dos pods distintos con el mismo label que usa el `selector` de un ReplicaSet, este los adopta como propios y les añade la referencia (`ownerReferences`) al ReplicaSet, aunque los pods sean completamente distintos entre sí — para el ReplicaSet son "iguales" por compartir label.
 >
-> Por eso, los pods deben crearse siempre mediante unidades u objetos superiores: **ReplicaSets** o **Deployments**.
- 
+> Por eso, los pods deben crearse siempre a través de objetos superiores: **ReplicaSets** o **Deployments**, nunca sueltos.
+
 ### 🐛 Problemas de ReplicaSet
- 
+
 El ReplicaSet mantiene un número `n` de réplicas de un pod según lo definido en el manifiesto YAML.
- 
-Si se modifica un pod directamente (en caliente), **no ocurre nada**: el ReplicaSet solo vigila el número de pods que coinciden con el label definido en `metadata`, por lo que no puede cambiar los pods ni sus configuraciones.
- 
+
+Si se modifica un pod directamente (en caliente), **no ocurre nada visible en el ReplicaSet**: este solo vigila que el número de pods que coinciden con el `selector`/label definido en `metadata` sea el correcto, pero no puede alterar la configuración de los pods ya existentes. Para propagar cambios de configuración hace falta un Deployment.
+
 ---
- 
+
 ## 🚢 Deployments
- 
-Un Deployment es un objeto que está por encima de un ReplicaSet, y este a su vez por encima del pod.
- 
+
+Un Deployment es un objeto que está por encima de un ReplicaSet, y este a su vez por encima del pod. Es el objeto que sí sabe gestionar actualizaciones de forma controlada (rolling updates, rollbacks, historial de revisiones).
+
 | Parámetro | Descripción | Valor por defecto |
 |---|---|---|
-| 🔽 `MaxAvailable` | Cuántos pods se permiten fuera de servicio | 25% |
-| 🔼 `MaxSearch` | Pods adicionales permitidos al crear nuevos | — |
-| 🗂️ Historial | ReplicaSets que Kubernetes mantiene por defecto | 10 |
- 
+| 🔽 `maxUnavailable` | Cuántos pods se permiten fuera de servicio durante la actualización | 25% |
+| 🔼 `maxSurge` | Pods adicionales por encima del número deseado permitidos al crear nuevos | 25% |
+| 🗂️ Historial | ReplicaSets/revisiones que Kubernetes mantiene por defecto | 10 |
+
 ### 🏷️ Mostrar labels de un deployment
 ```bash
 kubectl get deployment --show-labels
 ```
- 
+
 ### ✅ Verificar el éxito del rollout
 ```bash
 kubectl rollout status deployment <nombreDeployment>
 kubectl rollout status deployment deployment-test
 ```
- 
+
 ### 🔗 OwnerReferences en Deployment
- 
-- Un **pod** tiene como `ownerReference` a un **ReplicaSet**
-- Un **ReplicaSet** tiene como `ownerReference` a un **Deployment**
+
+- Un **pod** tiene como `ownerReference` a un **ReplicaSet**.
+- Un **ReplicaSet** tiene como `ownerReference` a un **Deployment**.
+
 🚫 Esta jerarquía no puede saltarse: un pod nunca puede tener como `ownerReference` directamente a un Deployment.
- 
+
 ---
- 
+
 ## 🔄 Rolling Updates de Deployments
- 
+
 ```bash
 kubectl apply -f deployment.yaml
 ```
- 
-Al aplicar `apply -f` sobre el YAML del Deployment con algún cambio, este eliminará y creará pods con las nuevas especificaciones (según su estrategia configurada).
- 
+
+Al aplicar `apply -f` sobre el YAML del Deployment con algún cambio (por ejemplo, una nueva imagen), Kubernetes crea un **nuevo ReplicaSet** con la especificación actualizada y va escalándolo hacia arriba mientras escala el ReplicaSet antiguo hacia abajo, de forma gradual y controlada según `maxUnavailable`/`maxSurge` — no se destruyen todos los pods de golpe.
+
 ### ✅ Comprobar el estado del rollout
 ```bash
 kubectl rollout status deployment <nombreDeployment>
 ```
- 
+
 ### 🔬 Ver detalle con describe
 ```bash
 kubectl describe deploy deployment-test
 ```
- 
+
 <details>
 <summary>📋 Ejemplo de salida (Events)</summary>
+
 ```
 Events:
   Type    Reason             Age                From                   Message
@@ -265,24 +286,25 @@ Events:
   Normal  ScalingReplicaSet  74s (x3 over 77s)  deployment-controller  (combined from similar events): Scaled down replica set deployment-test-69b6fb5cb6 to 0 from 1
 ```
 </details>
+
 ---
- 
+
 ## 📜 Histórico y revisiones de un Deployment
- 
+
 ```bash
 kubectl rollout history deployment deployment-test
 ```
 Muestra las revisiones o rollouts ejecutados.
- 
+
 ### 🏷️ Change-cause en un Deployment
- 
+
 Existen 3 maneras de definirlo:
- 
+
 **1️⃣ Flag `--record`** *(deprecated ⚠️, no se recomienda su uso)*
 ```bash
 kubectl apply -f deployment.yaml --record
 ```
- 
+
 **2️⃣ Anotación en el YAML** ✅ *(recomendada)*
 ```yaml
 metadata:
@@ -290,61 +312,64 @@ metadata:
     # Anotación para definir una causa de cambio en el deployment
     kubernetes.io/change-cause: Changes port to 120
 ```
- 
+
 **3️⃣ Comando `annotate`**
 ```bash
 kubectl annotate deployment.v1.apps/nginx-deployment kubernetes.io/change-cause="..."
 ```
- 
+
 ### 🔎 Ver una revisión concreta
 ```bash
 kubectl rollout history deploy deployment-test --revision=3
 ```
- 
+
 ---
- 
+
 ## ⏪ Rollbacks
- 
+
 Para volver a una versión anterior de un Deployment:
- 
+
 ```bash
 kubectl rollout undo deploy deployment-test --to-revision=3
 ```
- 
+
 > 💡 **Nota:** Kubernetes guarda por defecto hasta **10 revisiones** para poder volver atrás.
- 
+
 ---
- 
+
 ## 🌐 Servicios
- 
-Un servicio es un objeto que observa pods con cierto label (por ejemplo, `app=web`) y les proporciona:
- 
-- 🔒 Una **IP única** garantizada en el tiempo
-- ⚖️ **Balanceo de carga** entre los pods disponibles (algoritmo de distribución aleatoria)
-- 🌍 Un **DNS** consultable por el usuario
-- 👀 Visibilidad sobre pods con cierto label, estén o no dentro de un ReplicaSet
+
+Un Service es un objeto que observa pods con cierto label (por ejemplo, `app=web`) y les proporciona:
+
+- 🔒 Una **IP única** garantizada en el tiempo (aunque los pods por debajo cambien).
+- ⚖️ **Balanceo de carga** entre los pods disponibles (algoritmo de distribución aleatoria por defecto).
+- 🌍 Un **DNS** consultable por el usuario.
+- 👀 Visibilidad sobre pods con cierto label, estén o no dentro de un ReplicaSet.
+
 ### 🔗 Endpoints en un servicio
- 
+
 | | IP de Servicio | IP de Pod |
 |---|---|---|
-| Estabilidad | ✅ No cambia | ⚠️ Puede cambiar (el pod puede morir) |
- 
-El objeto **Endpoints** es una lista de IPs de los pods que cumplen el label del servicio:
- 
-- 🆕 Si nace un pod nuevo → se agrega su IP al endpoint
-- ☠️ Si un pod muere → el servicio detecta la baja y elimina su IP del endpoint
-De esta forma se mantiene la disponibilidad e integridad del tráfico.
- 
+| Estabilidad | ✅ No cambia | ⚠️ Puede cambiar (el pod puede morir y recrearse con otra IP) |
+
+El objeto **Endpoints** es una lista de IPs de los pods que cumplen el `selector` del servicio:
+
+- 🆕 Si nace un pod nuevo que cumple el label → se agrega su IP al endpoint.
+- ☠️ Si un pod muere → el servicio detecta la baja y elimina su IP del endpoint.
+
+De esta forma se mantiene la disponibilidad e integridad del tráfico sin que el cliente tenga que saber qué pods están vivos en cada momento.
+
 ### 🔬 Descripción de servicios
- 
-Por defecto, un servicio se crea de tipo `ClusterIP` (IP virtual):
- 
+
+Por defecto, un servicio se crea de tipo `ClusterIP` (IP virtual, solo accesible dentro del cluster):
+
 ```bash
 kubectl describe svc my-service
 ```
- 
+
 <details>
 <summary>📋 Ejemplo de salida</summary>
+
 ```
 Name:              my-service
 Namespace:         default
@@ -363,12 +388,14 @@ Session Affinity:  None
 Events:            <none>
 ```
 </details>
+
 ```bash
 kubectl get po -l app=front -o wide
 ```
- 
+
 <details>
 <summary>📋 Ejemplo de salida</summary>
+
 ```
 NAME                               READY   STATUS    RESTARTS   AGE     IP           NODE             NOMINATED NODE   READINESS GATES
 deployment-test-6cf85c55cf-mr254   1/1     Running   0          6m35s   10.1.0.129   docker-desktop   <none>           <none>
@@ -376,147 +403,207 @@ deployment-test-6cf85c55cf-s7xzc   1/1     Running   0          6m40s   10.1.0.1
 deployment-test-6cf85c55cf-wstdh   1/1     Running   0          6m38s   10.1.0.128   docker-desktop   <none>           <none>
 ```
 </details>
-> 🚫 **No es recomendable** crear pods fuera de ReplicaSets, como se ha comentado anteriormente.
- 
+
+> 🚫 **No es recomendable** crear pods fuera de ReplicaSets/Deployments, como se ha comentado anteriormente.
+
 ### 🌍 Servicios y DNS
- 
-Cada servicio aporta su propio DNS. Se puede consultar por IP o por nombre DNS:
- 
+
+Cada servicio aporta su propio registro DNS interno (`<servicio>.<namespace>.svc.cluster.local`). Se puede consultar por IP o por nombre DNS:
+
 ```bash
 curl my-service:8080
 curl <IP>:8080
 ```
- 
+
 ### 🗂️ Tipos de servicios
- 
+
 | Tipo | Descripción |
 |---|---|
-| 🏠 **ClusterIP** | IP virtual asignada por Kubernetes, permanente en el tiempo. No accesible desde fuera del cluster. |
-| 🚪 **NodePort** | Expone el servicio fuera del cluster a nivel de nodo. Rango de puertos por defecto: `30000-32767`. |
-| ☁️ **LoadBalancer** | Kubernetes no proporciona balanceadores por defecto; se usan típicamente en entornos cloud. |
- 
+| 🏠 **ClusterIP** | IP virtual asignada por Kubernetes, permanente en el tiempo. No accesible desde fuera del cluster. Es el tipo por defecto. |
+| 🚪 **NodePort** | Expone el servicio fuera del cluster a nivel de nodo, abriendo el mismo puerto en todos los nodos. Rango de puertos por defecto: `30000-32767`. |
+| ☁️ **LoadBalancer** | Kubernetes no proporciona balanceadores por defecto; se implementa típicamente por el proveedor cloud (AWS ELB, GCP LB, etc.). En local (Docker Desktop) se simula asignando `localhost` como IP externa. |
+| 🔗 **ExternalName** | No balancea pods: mapea el servicio a un nombre DNS externo mediante un `CNAME`. Útil para referenciar servicios fuera del cluster con un nombre interno consistente. |
+
 ---
 
-## Hands on K8s
+## 🐹 Hands-on: app Go en Docker + Kubernetes
 
-API de golang primero crearemos contenedor de docker
+### 1️⃣ Contenedor de desarrollo para compilar/ejecutar la app en Go
 
-
+**Linux:**
+```bash
 docker run --rm -dti -v $PWD/:/go --net host --name golang golang bash
+```
 
-- docker run — crea y arranca un nuevo contenedor.
-- --rm — al parar el contenedor, Docker lo elimina automáticamente (no deja basura de contenedores parados).
-- -d — modo detached: el contenedor corre en segundo plano, no se queda "enganchado" a tu terminal.
-- -t — asigna una pseudo-terminal (TTY) al contenedor.
-- -i — modo interactivo, mantiene abierto el stdin aunque no estés conectado.
-- -dti es simplemente la combinación de esas tres flags juntas.
-- -v $PWD/:/go — monta (bind mount) el directorio actual de tu máquina host ($PWD, es decir, donde ejecutas el comando) dentro del contenedor, en la ruta /go. Esto significa que todo lo que haya en tu carpeta actual será visible y editable desde dentro del contenedor en /go, y viceversa. /go es justo el GOPATH por defecto de la imagen oficial de Golang, así que es una forma típica de montar tu código para compilarlo/ejecutarlo dentro del contenedor.
-- --net host — el contenedor usa directamente la red del host, en lugar de tener su propia red aislada (bridge). Esto significa que si el proceso dentro del contenedor abre un puerto (por ejemplo :8080), estará accesible directamente en localhost:8080 de tu máquina, sin necesidad de mapear puertos con -p. (Nota: --net host solo funciona así en Linux; en Docker Desktop para Windows/Mac tiene comportamiento limitado o distinto).
-- --name golang — le pone el nombre golang al contenedor, para poder referirte a él fácilmente (docker exec -it golang ..., docker stop golang, etc.) en lugar de usar el ID aleatorio.
-- golang — la imagen que se usa para crear el contenedor (la imagen oficial de Go en Docker Hub).
-- bash — el comando que se ejecuta dentro del contenedor al arrancar; en vez del entrypoint por defecto de la imagen, abre una shell bash.
+| Flag | Significado |
+|---|---|
+| `docker run` | Crea y arranca un nuevo contenedor. |
+| `--rm` | Al parar el contenedor, Docker lo elimina automáticamente (sin dejar contenedores parados como basura). |
+| `-d` | Modo *detached*: el contenedor corre en segundo plano, sin quedar "enganchado" a la terminal. |
+| `-t` | Asigna una pseudo-terminal (TTY) al contenedor. |
+| `-i` | Modo interactivo: mantiene abierto el stdin aunque no estés conectado. |
+| `-dti` | Es simplemente la combinación de esos tres flags juntos. |
+| `-v $PWD/:/go` | Monta (*bind mount*) el directorio actual del host dentro del contenedor en `/go`. Todo lo que haya en la carpeta local es visible y editable desde el contenedor, y viceversa. `/go` es justo el `GOPATH` por defecto de la imagen oficial de Golang, por lo que es la forma típica de montar el código para compilarlo/ejecutarlo dentro. |
+| `--net host` | El contenedor usa directamente la red del host en vez de tener red aislada (*bridge*). Si el proceso abre un puerto (p. ej. `:8080`), queda accesible directamente en `localhost:8080` sin mapear puertos con `-p`. ⚠️ Solo funciona así en **Linux**; en Docker Desktop para Windows/Mac tiene comportamiento limitado o distinto. |
+| `--name golang` | Nombra el contenedor `golang`, para referenciarlo fácilmente (`docker exec -it golang ...`, `docker stop golang`, etc.) en lugar de usar el ID aleatorio. |
+| `golang` | Imagen oficial de Go usada para crear el contenedor. |
+| `bash` | Comando ejecutado al arrancar, en vez del entrypoint por defecto: abre una shell bash. |
 
+> ⚠️ **Importante:** `$PWD` es sintaxis de Linux/macOS. En Windows cambia según la shell:
 
-¡IMPORTANTE! el apartado "$PWD" es para linux, en cmd seria
-
+**CMD (Windows):**
+```cmd
 docker run --rm -it -v %cd%:/go -p 9090:9090 --name golang -w /go golang go run main.go
+```
+Esta variante arranca directamente la aplicación en Go (`-w /go` fija el *working directory* y ejecuta `go run main.go` de inmediato, sin abrir shell).
 
-Todo eso para arrancar directamente la aplicacion en go
-
-y en powershell
+**PowerShell (Windows):**
+```powershell
 docker run --rm -dti -v ${PWD}:/go --net host --name golang golang bash
+```
 
- 
+### 2️⃣ Crear el pod de prueba en Kubernetes
+
+Forma correcta recomendada — con `--rm` el pod se autodestruye al salir de la sesión, evitando dejar pods sueltos de prueba:
+```bash
 kubectl run podtest3 --rm -ti --image=nginx:alpine -- sh
+```
 
-comando correcto para crear pod 
-
-
+Si el pod ya existe y solo quieres entrar en él:
+```bash
 kubectl exec -it podtest3 -- sh
-Si ya esta craeado
+```
 
-## NameSpaces
+---
 
-Es una separacion logica que nos limita a ciertos aspectos
+## 🗂️ Namespaces
 
-Nos ayuda a ser un poco mas organizados, separando los recursos para aprovecharlos mejor
+Un Namespace es una **separación lógica** dentro del mismo cluster que permite organizar y aislar recursos.
 
-Por ejemplo, entorno de namespace para desarrollo y otro para pruebas de cliente
+- 📁 Ayuda a mantener orden separando recursos por proyecto o entorno (p. ej. un namespace de desarrollo y otro de pruebas de cliente).
+- 🏢 Permite tener varios proyectos conviviendo en el mismo cluster sin pisarse.
+- 🚧 Dentro de un namespace se pueden limitar: número de pods, hardware asignado (CPU, RAM, almacenamiento) y autorización/RBAC.
 
-Nos sirven también para tener diferentes proyectos en un mismo entorno
+### 📋 Namespaces por defecto
+```bash
+kubectl get ns
+# equivalente a:
+kubectl get namespace
+```
 
-En un namespace puedes limitar caracteristicas de pods, numero de ellos, hardware de los pods (cpu, ram, almacenamiento)
-
-Limitar autorizacion
-
-### NameSpaces por defecto
-
-kubectl get ns == kubectl get namespace
-
-
-### Crear nameSpaces
-
+### ➕ Crear un namespace
+```bash
 kubectl create ns test-namespace
+```
 
-svcName + nsName + svc.cluster.local
+### 🌍 DNS de un servicio dentro de un namespace
+El FQDN de un servicio sigue este patrón:
+```
+<nombre-servicio>.<nombre-namespace>.svc.cluster.local
+```
 
+---
 
-## Contextos y namespaces
+## 🧭 Contextos
 
+Un *contexto* combina cluster + usuario + namespace, y permite cambiar rápidamente el ámbito de trabajo de `kubectl` sin reescribir esos tres parámetros en cada comando.
+
+### 🔎 Ver contextos disponibles
+```bash
 kubectl config view
+```
 
-Para visualizar los contextos
-
+### ➕ Crear un nuevo contexto
+```bash
 kubectl config set-context ci-context --namespace=ci --cluster=docker-desktop --user=Samuel
+```
 
+Al volver a listar la configuración veremos el nuevo contexto:
+```bash
 kubectl config view
+```
 
-Y veremos el nuevo contexto
-
+### 🔄 Cambiar de contexto activo
+```bash
 kubectl config use-context ci-context
+```
+```
 Switched to context "ci-context".
+```
 
-## Limites
+---
 
-Limites de RAM
-  - bytes
-  - megabytes
-  - gigabytes
+## 📏 Límites de recursos (Limits & Requests)
 
-Limites de CPU
-  - 100 mc (milicores)
+### Unidades
 
-### Limits y requests
+| Recurso | Unidades habituales |
+|---|---|
+| 💾 RAM | bytes, `Mi`/`Gi` (mebibytes/gibibytes) |
+| ⚙️ CPU | `m` (milicores) — p. ej. `100m` = 0.1 CPU |
 
-- Limits: si tenemos un limite de 30 MB quiere decir que permitimos 10 MB adicionales al pod 
+### Limits vs. Requests
 
-- Requests: cuanto se va a dar a x pod recursos garantizados, si por ejemplo necesita 20 MB de de RAM la request dedicará esos 20 MB a ese pod
+- **`limits`**: techo máximo de recursos que el pod puede llegar a consumir. Por ejemplo, un límite de RAM de 30 Mi significa que el pod nunca podrá superar esos 30 Mi, por muy poco que use el nodo.
+- **`requests`**: cantidad de recursos que se **reserva de forma garantizada** para el pod. Si un pod solicita `requests: 20Mi`, el scheduler solo lo colocará en un nodo que pueda garantizarle esos 20 Mi, y esa RAM queda apartada para él aunque no la use toda.
 
-En otras palabras los limites sirven para poder exceder los recursos hasta un número definido, todo dependerá, eso si, si el nodo tiene ese espacio de MB o GB, en el caso de que el pod se pase, kubernetes reinciará o eliminar el pod
+En otras palabras: el `request` es lo que el pod tiene garantizado, y el `limit` es hasta dónde se le permite crecer por encima de ese mínimo, siempre que el nodo tenga capacidad disponible. Si el pod se excede del `limit`, Kubernetes lo reinicia o lo elimina.
 
+> 🔴 **`OOMKilled`**: estado que usa Kubernetes cuando un pod es terminado por quedarse sin memoria (*Out Of Memory*).
+>
+> 🟡 **`Pending`**: estado de un pod que está esperando a que algún nodo tenga capacidad suficiente de CPU/RAM para poder programarlo (*schedular*lo).
 
-OOMKilled es un estado que usa kubernetes cuando el pod está Out Of Memory
+### ⚙️ Limitar recursos de CPU
 
-Pending estado cuando un pod espera un nodo para satisfacer sus requisitos de RAM y CPU
+Ver fichero de ejemplo `limit-cpu.yaml`.
 
-#### Limitar recursos de CPU
+Para diagnosticar los recursos que está usando un nodo del cluster:
+```bash
+kubectl describe nodes <nombre-del-nodo>
+```
 
-ver fichero yaml limit-cpu
+---
 
-Para diagnosticar los recursos que usa nuestro cluster de kubernetes podemos usar este comando
+## 🎚️ Quality of Service (QoS)
 
-kubectl describe nodes <nombre-del-cluster>
+Kubernetes asigna automáticamente una clase de QoS a cada pod según cómo defina sus `requests`/`limits`. Esta clase determina qué pods se eliminan primero cuando el nodo se queda sin recursos.
 
+| Clase | Condición | Descripción |
+|---|---|---|
+| 🟢 **Guaranteed** | `requests` == `limits` en CPU y RAM, en todos los contenedores | Máxima prioridad; los últimos en ser eliminados ante falta de recursos. |
+| 🟡 **Burstable** | Tiene `requests`/`limits` definidos, pero no son iguales | Trabajan normalmente por debajo de lo solicitado, pudiendo exceder ese uso puntualmente hasta el límite definido. |
+| 🔴 **BestEffort** | No define ningún `request` ni `limit` | Los más peligrosos: sin ningún tope, pueden consumir recursos hasta agotar un nodo. Son los primeros en ser eliminados si hace falta liberar recursos. |
 
-## QOS Quality Of Service
+---
 
-- Guaranteed: pods que aquellos limites y recursos son iguales
+## 🚧 LimitRange
 
-- Burstable: pods que tienen recursos que trabajan por debajo de lo limitado que pueden exceder durante un tiempo esa cantidad de recursos especificada en el manifiesto
+El `LimitRange` actúa **a nivel de objeto individual**, dentro de un namespace: valida que cada pod/contenedor que se cree respete los mínimos y máximos de recursos definidos en su manifiesto YAML.
 
-- BestEffort: pods que no definen ningun limite, estos son los mas peligrosos pues no cuentan con limite, consumiendo recursos hasta destruir un nodo
+- ✅ Solo aplica a los objetos que estén dentro del namespace donde se definió el `LimitRange`. Un pod sin namespace indicado no tendrá `LimitRange` asociado.
+- 🚫 Si se intenta crear un pod que **supera el máximo** permitido, la API lo rechaza:
+```
+Error from server (Forbidden): error when creating "minMaxLimits.yaml": pods "podtest4" is forbidden: [maximum cpu usage per Container is 1, but limit is 2, maximum memory usage per Container is 1Gi, but limit is 2G]
+```
+- 🚫 Si el pod **no llega al mínimo** exigido de CPU o RAM, también es rechazado:
+```
+The Pod "podtest4" is invalid:
+* spec.containers[0].resources.requests: Invalid value: "300m": must be less than or equal to cpu limit of 50m
+* spec.containers[0].resources.requests: Invalid value: "400M": must be less than or equal to memory limit of 50M
+```
+
+---
+
+## 📊 ResourceQuota
+
+El `ResourceQuota` aplica **a nivel de namespace completo**, a diferencia del `LimitRange` que valida objeto por objeto.
+
+- 📐 Limita la **suma total** de todos los recursos individuales consumidos dentro del namespace (no entiende de objetos concretos, solo del agregado).
+- 🤝 No sustituye al `LimitRange`: son complementarios. El `LimitRange` valida que cada pod individual sea razonable; el `ResourceQuota` valida que la suma de todos ellos no desborde el presupuesto del namespace.
+
+---
 
 <div align="center">
-📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel* 
- 
+📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel*
+
 </div>

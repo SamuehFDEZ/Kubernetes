@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name:  pro
+  labels:
+    name: pro
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: min-manx
+  namespace: pro
+spec:
+  limits:
+  - max:
+      memory: 1Gi
+      cpu: 1
+    min:
+      memory: 100M
+      cpu: 0.1
+    type: Container
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: podtest4
+  namespace: pro
+  labels:
+    app: backend
+    env: dev
+spec:
+  containers:
+  - name: cont1
+    image: nginx:alpine
+    resources:
+      limits:
+        memory: 50M
+        cpu: 50m
+      requests:
+        memory: 400M
+        cpu: 0.3
