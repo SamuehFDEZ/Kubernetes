@@ -18,10 +18,10 @@ type HandsOn struct {
 // Funcion para crear servidor simple con validaciones en go
 func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-    if r.URL.Path != "/"{
-        http.NotFound(w,r)
-        return
-    }
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
 
 	resp := HandsOn{
 		Time:     time.Now(),
@@ -33,7 +33,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Write(jsonResp)
 }
 

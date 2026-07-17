@@ -4,9 +4,9 @@ metadata:
   annotations: 
     # Anotacion para definir una causa de cambio en el deployment
     kubernetes.io/change-cause: Changes port to 120
-  name: backend-k8s-hands-on
+  name: frontend-k8s-hands-on
   labels:
-    app: backend
+    app: frontend
 # Hasta aqui lo que es el deployment
 # Desde aqui el replicaset
 spec:
@@ -15,30 +15,29 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: backend
+      app: frontend
 # Desde aqui el pod que se creará
   template:
     metadata:
       labels:
-        app: backend
+        app: frontend
     spec:
       containers:
-      - name: backend
-        image: k8s-hands-on:v2
+      - name: frontend
+        image: frontend-k8s-hands-on:v1
         # Para que mire si hay imagenes localmente
         imagePullPolicy: IfNotPresent
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-k8s-hands-on
+  name: frontend-k8s-hands-on
   labels:
-    app: backend
+    app: frontend
 spec:
+  type: NodePort
   selector:
-    app: backend
+    app: frontend
   ports:
     - protocol: TCP
       port: 80
-      # que puerto del pod voy a consumir
-      targetPort: 9090

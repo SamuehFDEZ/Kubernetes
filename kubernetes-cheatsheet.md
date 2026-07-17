@@ -427,6 +427,55 @@ y en powershell
 docker run --rm -dti -v ${PWD}:/go --net host --name golang golang bash
 
  
+kubectl run podtest3 --rm -ti --image=nginx:alpine -- sh
+
+comando correcto para crear pod 
+
+
+kubectl exec -it podtest3 -- sh
+Si ya esta craeado
+
+## NameSpaces
+
+Es una separacion logica que nos limita a ciertos aspectos
+
+Nos ayuda a ser un poco mas organizados, separando los recursos para aprovecharlos mejor
+
+Por ejemplo, entorno de namespace para desarrollo y otro para pruebas de cliente
+
+Nos sirven también para tener diferentes proyectos en un mismo entorno
+
+En un namespace puedes limitar caracteristicas de pods, numero de ellos, hardware de los pods (cpu, ram, almacenamiento)
+
+Limitar autorizacion
+
+### NameSpaces por defecto
+
+kubectl get ns == kubectl get namespace
+
+
+### Crear nameSpaces
+
+kubectl create ns test-namespace
+
+svcName + nsName + svc.cluster.local
+
+
+## Contextos y namespaces
+
+kubectl config view
+
+Para visualizar los contextos
+
+kubectl config set-context ci-context --namespace=ci --cluster=docker-desktop --user=Samuel
+
+kubectl config view
+
+Y veremos el nuevo contexto
+
+kubectl config use-context ci-context
+Switched to context "ci-context".
+
 <div align="center">
 📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel* 
  
