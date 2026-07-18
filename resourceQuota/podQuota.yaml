@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: qa
+      labels:
+        name: qa
+  - apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: pod-demo
+    spec:
+      hard:
+        pods: "3"
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        # Anotacion para definir una causa de cambio en el deployment
+        kubernetes.io/change-cause: Changes port to 120
+      name: deployment-test
+      namespace: qa
+      labels:
+        app: front
+    # Hasta aqui lo que es el deployment
+    # Desde aqui el replicaset
+    spec:
+      # cuantos replicaSet queremos guardar en un futro
+      #revisionHistoryLimit: 1
+      replicas: 4
+      selector:
+        matchLabels:
+          app: front
+      # Desde aqui el pod que se creará
+      template:
+        metadata:
+          labels:
+            app: front
+            namespace: qa
+        spec:
+          containers:
+            - name: nginx
+              image: nginx:alpine

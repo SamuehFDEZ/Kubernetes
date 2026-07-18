@@ -601,7 +601,31 @@ El `ResourceQuota` aplica **a nivel de namespace completo**, a diferencia del `L
 - 📐 Limita la **suma total** de todos los recursos individuales consumidos dentro del namespace (no entiende de objetos concretos, solo del agregado).
 - 🤝 No sustituye al `LimitRange`: son complementarios. El `LimitRange` valida que cada pod individual sea razonable; el `ResourceQuota` valida que la suma de todos ellos no desborde el presupuesto del namespace.
 
+En un resourceQuota hemos de definir tanto el request como el limit para garantizar que no se pasen los pods de lo establecido en el manifiesto
+
+Además de limitar el uso de ram y cpu también podemos controlar el numero de objetos que queremos tener en un namespace, por ejemplo, un namespace será capaz únicamente de crear pods
+
 ---
+
+## Probe
+
+Es un estado que se ejecuta para comprobar que el contenedor se encuentra en buen estado
+
+- Probe es un diagnostico realizado por kubelet el cual corre en cada nodo, es el encargado de realizar los diagnosticos sobre los contenedores, dado un contenedor le asignamos un probe y un rango de tiempo, dado esto, kubelet irá preguntando al contenedor si está correcto, en caso contrario, tomará una acción contra el contenedor
+
+Como pregunta kubelet
+    - Mediante comando: kubelet ejecuta un comando, si devuelve 0 está ok, en caso contrario, ko
+    - Por TCP: si el puerto funciona y responde todo ok, si el puerto no responde kubelet asume que hay un error
+    - Http: kubelet hace una peticion yaml hacia el contenedor, cualquier codigo de 200 es ok, entre 400 y 500 algo hay mal
+
+Tipos de probe
+ - Liveness: si la aplicacion esta viva
+   - Es una prueba que kubelet ejecuta en el contenedor cada x segundos, en esta prueba solo esperamos una resuesta del contenedor, si por ejemplo tenemos una web, basta con una peticion GET, si que puede ocurrir que para el contenedor la aplicacion está ok pero nosotros si accedemos puede haber un 500, por ello, con un liveness nos aseguramos de reinicar la aplicacion si no está funcionando bien
+ - readiness: para ver si la aplicacion esta lista
+   - Tenemos un servicio con dos pods, digamos que queremos agregar un nuevo pod pero queremos garantizar que cuando el pod esté listo pueda ponerse a servicio, para eso sirve el readiness, una especie de endpoint validador para saber si un pod está listo o no para recibir peticiones, si no pasa el readiness no se incluye
+ -  Startup: para aplicaciones que tardan en arrancar o inciarse
+   - El startup se usa para aplicaciones grandes, validando que el pod, hasta que no esté todo desplegado y todo listo no se despliegue
+
 
 <div align="center">
 📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel*
