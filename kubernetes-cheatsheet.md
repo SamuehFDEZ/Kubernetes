@@ -626,6 +626,47 @@ Tipos de probe
  -  Startup: para aplicaciones que tardan en arrancar o inciarse
    - El startup se usa para aplicaciones grandes, validando que el pod, hasta que no esté todo desplegado y todo listo no se despliegue
 
+## ConfigMaps y variables de entorno
+
+Para las variables de entorno las crearemos de la siguiente forma, para mas detalle consultar yaml en /envs/env.yaml
+
+      env:
+        - name: VAR1
+          value: "valor de prueba 2"
+        - name: VAR2
+          value: "TEST2"
+        - name: VAR3
+          value: "TEST3"
+
+Pero basicamente es esto, luego esas variables quedarán referenciadas dentro del pod, si mediante bash nos introducimos en el y escribimos env dentro del pod para ver las variables que almacena
+
+Además otra forma, vista en el fichero /env/ref.yaml es que podemos hacer referencia a las variables en base a los manifiestos que k8s crea de sus objetos, por ejemplo:
+
+      env:
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+
+Ese spec.NodeName lo podemos observar mediante un describe -o yaml del pod, es una forma de recuperar las variables de manera dinámica como hariamos en cualquier programa
+
+### ConfigMap
+
+Es otro objeto de Kubernetes que se puede crear actualizar y eliminar, un configMap se creó para separar las configuraciones y hacer mas portables las configurciones de los pods, se usa también para evitar hardcodear en los pods, el pod consumirá todo lo que el configMap tenga definido como la imagen de un nginx
+
+El configMap se vasa en Key Value, en el pod se referenciará a la Key del configMap, así consumirá a la vez los valores de esa Key dentro del configMap
+
+Una forma de crear un configMap es, mediante un archivo .conf pasarlo a un configMap, la forma más idonea es de hacerlo en un manifiesto de kubernetes donde escribiremos las configuraciones de un configMap
+
+El pod podrá ver el configMap mediante variables de entorno que hemos visto antes
+
+Por defecto un pod toma la configuracion del servicio que aloje, en este caso, el de nginx
+
+kubectl create configmap nginx-config --from-file=.\configMapExamples\nginx.conf
+
+kubectl get cm
+
+Dado el archivo cm-nginx.yaml si eliminamos las keys del configmap 
 
 <div align="center">
 📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel*
