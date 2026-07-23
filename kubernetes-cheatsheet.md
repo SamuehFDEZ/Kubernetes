@@ -668,6 +668,36 @@ kubectl get cm
 
 Dado el archivo cm-nginx.yaml si eliminamos las keys del configmap 
 
+## Secret
+
+Nos ayuda a guardar informacion sensible que no deberia ser visible para todo el mundo, ya sean tokens o contraseñas, a diferencia de los configMap donde podemos guardar por ejemplo nombres de configuracion
+
+El secret está aislado del pod, si se modifica el secret, el cambio se aplica en el pod, siendo más facil de configurar
+
+Desde un pod se accede a un secret como un configMap, mediante variables env o mediante volume
+
+Para crear un secret
+
+kubectl create secret generic mitesoro --from-file=.\secret-files\test.txt
+
+kubectl describe secrets mitesoro
+
+cuando hacemos un describe kubernetes no nos muestra el valor, pero si lo obtenemos mediante 
+kubectl get secrets mitesoro -o yaml
+
+tenemos los datos en base64
+
+
+Una herramienta para reemplazar secrets para fortalezer la seguridad es envsubst
+
+ensubst < secure.yaml > tmp.yaml
+
+hacemos un cat tmp.yaml
+
+y ahí es donde tenemos los datos reales
+
+con secure.yaml lo tenemos encodeado
+
 <div align="center">
 📚 *Cheatsheet personal de Kubernetes — mantenido por Samuel*
 
